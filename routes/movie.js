@@ -1,44 +1,131 @@
 const express = require("express");
-
-// create a router for movies
+//create a router for movies
 const router = express.Router();
 
-// load the models
-const Movie = require("../models/movie");
+// import functions from controller
+const {
+  getMovies,
+  getMovie,
+  addNewMovie,
+  updateMovie,
+  deleteMovie,
+} = require("../controllers/movie");
 
-// create the routes
+/* 
+  create the routes (CRUD)
+  GET /movies - get all the movies
+  GET /movies/:id - get one movie by id
+  POST /movies - add new movie
+  PUT /movies/:id - update movie
+  DELETE /movies/:id - delete movie
+*/
 
-// the routes to get all the movies (pointing to /movies)
+// get all the movies. Pointing to /movies
 router.get("/", async (req, res) => {
-  const Genre = req.query.Genre;
-  const Rating = req.query.Rating;
-  const Director = req.query.Director;
-
-  // create a container for filter
-  let filter = {};
-  if (Genre) {
-    // if genre exists, pass it to the filter container
-    filter.Genre = Genre;
+  try {
+    const Genre = req.query.Genre;
+    const Rating = req.query.Rating;
+    const Director = req.query.Director;
+    // use the getMovies from the controller to laod the movies data
+    const movies = await getMovies(Genre, Rating, Director);
+    res.status(200).send(movies);
+  } catch (error) {
+    res.status(400).send({
+      error: error._message,
+    });
   }
-  if (Rating) {
-    // if rating exist, pass it into the filter container
-    filter.Rating = { $gt: Rating };
-  }
-  if (Director) {
-    // if director exist, pass it into the filter container
-    filter.Director = Director;
-  }
-
-  // apply filter in .find()
-  const movies = await Movie.find(filter);
-  res.send(movies);
 });
 
 // get one movie by id
 router.get("/:id", async (req, res) => {
-  const id = req.params.id;
-  const movie = await Movie.findById(id);
-  res.send(movie);
+  try {
+    const id = req.params.id;
+    const movie = await getMovie(id);
+    res.status(200).send(movie);
+  } catch (error) {
+    res.status(400).send({
+      error: error._message,
+    });
+  }
+});
+
+// add movie
+// POST http://localhost:5555/movies
+router.post("/", async (req, res) => {
+  try {
+    // retrieve the data from req.body
+    const Title = req.body.Title;
+    const Director = req.body.Director;
+    const ReleaseYear = req.body.ReleaseYear;
+    const Genre = req.body.Genre;
+    const Rating = req.body.Rating;
+
+    // check for error
+    if (!Title || !Director || !ReleaseYear || !Genre || !Rating) {
+      return res.status(400).send({
+        error: "Required data is missing",
+      });
+    }
+
+    // pass in all the data to addNewMovie function
+    const newMovie = await addNewMovie(
+      Title,
+      Director,
+      ReleaseYear,
+      Genre,
+      Rating
+    );
+    res.status(200).send(newMovie);
+  } catch (error) {
+    // if there is an error, return the error code
+    res.status(400).send({
+      error: error._message,
+    });
+  }
+});
+
+// update movie
+// PUT http://localhost:5555/movies/9kdm40ikd93k300dkd3o
+router.put("/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const Title = req.body.Title;
+    const Director = req.body.Director;
+    const ReleaseYear = req.body.ReleaseYear;
+    const Genre = req.body.Genre;
+    const Rating = req.body.Rating;
+    // pass in the data into the updateMovie function
+    const updatedMovie = await updateMovie(
+      id,
+      Title,
+      Director,
+      ReleaseYear,
+      Genre,
+      Rating
+    );
+    res.status(200).send(updatedMovie);
+  } catch (error) {
+    res.status(400).send({
+      error: error._message,
+    });
+  }
+});
+
+// delete movie
+// DELETE http://localhost:5555/movies/9kdm40ikd93k300dkd3o
+router.delete("/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    // trigger the deleteMovie function
+    await deleteMovie(id);
+    res.status(200).send({
+      message: `Movie with the provided id #${id} has been deleted`,
+    });
+  } catch (error) {
+    res.status(400).send({
+      error: error._message,
+    });
+  }
 });
 
 module.exports = router;
